@@ -89,6 +89,7 @@ app.get('/start', (req, res) => {
 
   const firstPerson = view === '1P';
 
+  // Criando o bot
   const bot = mineflayer.createBot({
     host: 'BYTEServer.aternos.me', // Endereço do servidor
     port: 12444, // Porta do servidor
@@ -98,7 +99,9 @@ app.get('/start', (req, res) => {
 
   bot.once('spawn', () => {
     console.log('Bot conectado!');
-    mineflayerViewer(bot, { output: res, firstPerson }); // Renderizando diretamente na resposta HTTP
+
+    // Usando o prismarine-viewer para exibir o bot na mesma página
+    mineflayerViewer(bot, { output: res, firstPerson }); // O visualizador será incorporado diretamente na resposta HTTP
   });
 
   bot.on('error', (err) => {

@@ -6,7 +6,7 @@ const app = express();
 const WEB_PORT = 3000;
 const VIEWER_PORT = 3007;
 
-// Página inicial com design aprimorado
+// Página inicial com design aprimorado e escolha direta
 app.get('/', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -52,19 +52,6 @@ app.get('/', (req, res) => {
           height: 200px;
           object-fit: cover;
         }
-        .mode button {
-          width: 100%;
-          padding: 15px;
-          background-color: #ff6f61;
-          color: #fff;
-          font-size: 1.2em;
-          border: none;
-          cursor: pointer;
-          outline: none;
-        }
-        .mode button:hover {
-          background-color: #ff3b2e;
-        }
         footer {
           margin-top: 50px;
           font-size: 0.9em;
@@ -75,33 +62,18 @@ app.get('/', (req, res) => {
     <body>
       <h1>Selecione o modo de visualização</h1>
       <div class="container">
-        <div class="mode" onclick="selectView('3D')">
+        <div class="mode" onclick="window.location.href='/start?view=3D'">
           <img src="https://via.placeholder.com/300x200?text=3D+View" alt="3D View">
-          <button>Modo 3D</button>
+          <h3>Modo 3D</h3>
         </div>
-        <div class="mode" onclick="selectView('1P')">
+        <div class="mode" onclick="window.location.href='/start?view=1P'">
           <img src="https://via.placeholder.com/300x200?text=1P+View" alt="1P View">
-          <button>Modo 1P</button>
+          <h3>Modo 1P</h3>
         </div>
       </div>
       <footer>
         <p>Feito para você aproveitar o mundo do Minecraft de diferentes maneiras!</p>
       </footer>
-      <script>
-        function selectView(view) {
-          fetch(\`/start?view=\${view}\`)
-            .then((response) => {
-              if (response.ok) {
-                alert('Iniciando o bot em modo ' + view + '...');
-              } else {
-                alert('Erro ao iniciar o bot.');
-              }
-            })
-            .catch((error) => {
-              console.error('Erro:', error);
-            });
-        }
-      </script>
     </body>
     </html>
   `);
@@ -110,7 +82,6 @@ app.get('/', (req, res) => {
 // Rota para iniciar o bot com o modo selecionado
 app.get('/start', (req, res) => {
   const view = req.query.view;
-
   if (view !== '3D' && view !== '1P') {
     return res.status(400).send('Modo inválido.');
   }
@@ -126,19 +97,21 @@ app.get('/start', (req, res) => {
   });
 
   bot.once('spawn', () => {
-    console.log(`Bot conectado! Acesse http://localhost:${VIEWER_PORT} para visualizar em modo ${view}.`);
+    console.log(`Bot conectado! Acesse http://localhost:${VIEWER_PORT} para visualizar.`);
     mineflayerViewer(bot, { port: VIEWER_PORT, firstPerson });
+
+    // Redirecionar automaticamente para o visualizador
+    res.redirect(`http://localhost:${VIEWER_PORT}`);
   });
 
   bot.on('error', (err) => {
     console.error('Erro ao conectar ao servidor:', err);
+    res.status(500).send('Erro ao conectar ao servidor. Verifique as configurações.');
   });
 
   bot.on('end', () => {
     console.log('Bot desconectado do servidor.');
   });
-
-  res.send(`Bot iniciado em modo ${view}.`);
 });
 
 // Iniciar o servidor web

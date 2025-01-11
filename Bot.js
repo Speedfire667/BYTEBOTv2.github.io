@@ -1,12 +1,13 @@
 const express = require('express');
 const mineflayer = require('mineflayer');
-const mineflayerViewer = require('prismarine-viewer').mineflayer;
+const { createServer } = require('http');
+const { mineflayer: mineflayerViewer } = require('prismarine-viewer');
 
 const app = express();
-const WEB_PORT = 3000;
-const VIEWER_PORT = 3007;
+const server = createServer(app);
+const WEB_PORT = process.env.PORT || 3000; // Porta fornecida pelo Render ou padrão
 
-// Página inicial com design aprimorado e escolha direta
+// Página inicial com design aprimorado
 app.get('/', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -63,11 +64,11 @@ app.get('/', (req, res) => {
       <h1>Selecione o modo de visualização</h1>
       <div class="container">
         <div class="mode" onclick="window.location.href='/start?view=3D'">
-          <img src="https://via.placeholder.com/300x200?text=3D+View" alt="3D View">
+          <img src="https://cdn.pixabay.com/photo/2021/08/21/10/46/minecraft-6562284_960_720.jpg" alt="3D View">
           <h3>Modo 3D</h3>
         </div>
         <div class="mode" onclick="window.location.href='/start?view=1P'">
-          <img src="https://via.placeholder.com/300x200?text=1P+View" alt="1P View">
+          <img src="https://cdn.pixabay.com/photo/2021/08/21/10/46/minecraft-6562281_960_720.jpg" alt="1P View">
           <h3>Modo 1P</h3>
         </div>
       </div>
@@ -79,7 +80,7 @@ app.get('/', (req, res) => {
   `);
 });
 
-// Rota para iniciar o bot com o modo selecionado
+// Inicia o bot com o modo selecionado
 app.get('/start', (req, res) => {
   const view = req.query.view;
   if (view !== '3D' && view !== '1P') {
@@ -88,7 +89,6 @@ app.get('/start', (req, res) => {
 
   const firstPerson = view === '1P';
 
-  // Criar e configurar o bot
   const bot = mineflayer.createBot({
     host: 'BYTEServer.aternos.me', // Endereço do servidor
     port: 12444, // Porta do servidor
@@ -97,24 +97,21 @@ app.get('/start', (req, res) => {
   });
 
   bot.once('spawn', () => {
-    console.log(`Bot conectado! Acesse http://localhost:${VIEWER_PORT} para visualizar.`);
-    mineflayerViewer(bot, { port: VIEWER_PORT, firstPerson });
-
-    // Redirecionar automaticamente para o visualizador
-    res.redirect(`http://localhost:${VIEWER_PORT}`);
+    console.log('Bot conectado!');
+    mineflayerViewer(bot, { output: res, firstPerson }); // Renderizando diretamente na resposta HTTP
   });
 
   bot.on('error', (err) => {
     console.error('Erro ao conectar ao servidor:', err);
-    res.status(500).send('Erro ao conectar ao servidor. Verifique as configurações.');
+    res.status(500).send('Erro ao conectar ao servidor.');
   });
 
   bot.on('end', () => {
-    console.log('Bot desconectado do servidor.');
+    console.log('Bot desconectado.');
   });
 });
 
-// Iniciar o servidor web
-app.listen(WEB_PORT, () => {
-  console.log(`Servidor web rodando em http://localhost:${WEB_PORT}`);
+// Iniciar o servidor
+server.listen(WEB_PORT, () => {
+  console.log(`Servidor rodando na porta ${WEB_PORT}`);
 });

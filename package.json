@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "express": "^4.21.2",
+    "mineflayer": "^4.25.0",
+    "prismarine-viewer": "^1.29.0"
+  }
+}

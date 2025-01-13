@@ -1,7 +1,13 @@
 {
+  "name": "minecraft-bot",
+  "version": "1.0.0",
+  "description": "Minecraft bot that interacts with OpenAI",
+  "main": "index.js",
+  "scripts": {
+    "start": "node Bot.js"
+  },
   "dependencies": {
-    "express": "^4.21.2",
-    "mineflayer": "^4.25.0",
-    "prismarine-viewer": "^1.29.0"
+    "mineflayer": "^4.0.0",
+    "openai": "^3.2.0"
   }
 }

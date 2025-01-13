@@ -4,7 +4,7 @@
   "description": "Bot Minecraft",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node Bot.js"
   },
   "dependencies": {
     "mineflayer": "^4.4.0",

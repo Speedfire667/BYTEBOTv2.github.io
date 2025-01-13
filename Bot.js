@@ -1,120 +1,47 @@
-const express = require('express');
 const mineflayer = require('mineflayer');
-const { createServer } = require('http');
-const { mineflayer: mineflayerViewer } = require('prismarine-viewer');
-
-const app = express();
-const server = createServer(app);
-const WEB_PORT = process.env.PORT || 3000; // Porta fornecida pelo Render ou padrão
-
-// Página inicial com design aprimorado
-app.get('/', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Bot Viewer Selection</title>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          text-align: center;
-          background-color: #1e1e2f;
-          color: #f5f5f5;
-          margin: 0;
-          padding: 0;
-        }
-        h1 {
-          margin-top: 20px;
-          font-size: 2.5em;
-          color: #ff6f61;
-        }
-        .container {
-          display: flex;
-          justify-content: center;
-          gap: 20px;
-          margin-top: 50px;
-        }
-        .mode {
-          border: 2px solid #ff6f61;
-          border-radius: 10px;
-          overflow: hidden;
-          width: 300px;
-          transition: transform 0.3s;
-          background-color: #2e2e4e;
-          cursor: pointer;
-        }
-        .mode:hover {
-          transform: scale(1.1);
-        }
-        .mode img {
-          width: 100%;
-          height: 200px;
-          object-fit: cover;
-        }
-        footer {
-          margin-top: 50px;
-          font-size: 0.9em;
-          color: #aaa;
-        }
-      </style>
-    </head>
-    <body>
-      <h1>Selecione o modo de visualização</h1>
-      <div class="container">
-        <div class="mode" onclick="window.location.href='/start?view=3D'">
-          <img src="https://cdn.pixabay.com/photo/2021/08/21/10/46/minecraft-6562284_960_720.jpg" alt="3D View">
-          <h3>Modo 3D</h3>
-        </div>
-        <div class="mode" onclick="window.location.href='/start?view=1P'">
-          <img src="https://cdn.pixabay.com/photo/2021/08/21/10/46/minecraft-6562281_960_720.jpg" alt="1P View">
-          <h3>Modo 1P</h3>
-        </div>
-      </div>
-      <footer>
-        <p>Feito para você aproveitar o mundo do Minecraft de diferentes maneiras!</p>
-      </footer>
-    </body>
-    </html>
-  `);
+const { OpenAI } = require('openai');  // Novo import
+const openai = new OpenAI({
+  apiKey: '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', // Substitua pela sua chave!
 });
 
-// Inicia o bot com o modo selecionado
-app.get('/start', (req, res) => {
-  const view = req.query.view;
-  if (view !== '3D' && view !== '1P') {
-    return res.status(400).send('Modo inválido.');
-  }
-
-  const firstPerson = view === '1P';
-
-  // Criando o bot
+function createBot() {
   const bot = mineflayer.createBot({
-    host: 'BYTEServer.aternos.me', // Endereço do servidor
+    host: 'BYTEserver.aternos.me', // IP do servidor
     port: 12444, // Porta do servidor
-    username: 'AFKBot', // Nome do bot
-    version: '1.12.1', // Versão do Minecraft
+    username: 'Bot', // Nome do bot
   });
 
   bot.once('spawn', () => {
-    console.log('Bot conectado!');
-
-    // Usando o prismarine-viewer para exibir o bot na mesma página
-    mineflayerViewer(bot, { output: res, firstPerson }); // O visualizador será incorporado diretamente na resposta HTTP
+    bot.chat("Olá! Estou conectado e pronto para responder suas perguntas!");
   });
 
-  bot.on('error', (err) => {
-    console.error('Erro ao conectar ao servidor:', err);
-    res.status(500).send('Erro ao conectar ao servidor.');
+  bot.on('chat', async (username, message) => {
+    if (username === bot.username) return;
+
+    bot.chat("Processando sua pergunta...");
+
+    const prompt = `Meu nome é Bot e eu vivo dentro do Minecraft. Aqui estão algumas informações: - Posição atual: X=${bot.entity.position.x}, Y=${bot.entity.position.y}, Z=${bot.entity.position.z}. - Bloco abaixo de mim: ${bot.blockAt(bot.entity.position.offset(0, -1, 0))?.name || 'nenhum'}.
+
+    Pergunta do jogador: "${message}"
+
+    Responda com base nas informações acima.`;
+
+    try {
+      const response = await openai.chat.completions.create({
+        messages: [{ role: 'user', content: prompt }],
+        model: 'gpt-3.5-turbo',
+      });
+
+      const answer = response.choices[0].message.content.trim();
+      bot.chat(answer);
+    } catch (err) {
+      console.error('Erro ao chamar a API OpenAI:', err);
+      bot.chat("Desculpe, ocorreu um erro ao processar sua solicitação.");
+    }
   });
 
-  bot.on('end', () => {
-    console.log('Bot desconectado.');
-  });
-});
+  bot.on('kicked', (reason) => console.log(`Bot foi desconectado: ${reason}`));
+  bot.on('error', (err) => console.log(`Erro: ${err.message}`));
+}
 
-// Iniciar o servidor
-server.listen(WEB_PORT, () => {
-  console.log(`Servidor rodando na porta ${WEB_PORT}`);
-});
+createBot();

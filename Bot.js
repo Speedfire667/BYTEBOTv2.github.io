@@ -1,47 +1,79 @@
 const mineflayer = require('mineflayer');
-const { OpenAI } = require('openai');  // Novo import
-const openai = new OpenAI({
-  apiKey: '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', // Substitua pela sua chave!
+const { pathfinder, Movements, goals } = require('mineflayer-pathfinder');
+const { Configuration, OpenAIApi } = require('openai');
+
+// Configuração da IA
+const openaiConfig = new Configuration({
+    apiKey: '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' // Substitua pela sua chave da OpenAI
+});
+const openai = new OpenAIApi(openaiConfig);
+
+// Configuração do bot
+const bot = mineflayer.createBot({
+    host: 'BYTEserver.aternos.me', // Altere para o endereço do servidor
+    port: 12444, // Altere para a porta do servidor
+    username: 'OfflineBot', // Nome do bot
+    version: '1.12.1', // Altere para a versão desejada
+    offline: true
 });
 
-function createBot() {
-  const bot = mineflayer.createBot({
-    host: 'BYTEserver.aternos.me', // IP do servidor
-    port: 12444, // Porta do servidor
-    username: 'Bot', // Nome do bot
-  });
+bot.loadPlugin(pathfinder);
 
-  bot.once('spawn', () => {
-    bot.chat("Olá! Estou conectado e pronto para responder suas perguntas!");
-  });
+bot.once('spawn', () => {
+    bot.chat('Olá! Estou online. Pergunte sobre blocos ou peça para minerar algo!');
+});
 
-  bot.on('chat', async (username, message) => {
+bot.on('chat', async (username, message) => {
     if (username === bot.username) return;
 
-    bot.chat("Processando sua pergunta...");
+    if (message.startsWith('qual seu bloco')) {
+        const block = bot.blockAtCursor(); // Pega o bloco que o bot está olhando
+        if (!block) {
+            bot.chat('Não estou olhando para nenhum bloco.');
+            return;
+        }
 
-    const prompt = `Meu nome é Bot e eu vivo dentro do Minecraft. Aqui estão algumas informações: - Posição atual: X=${bot.entity.position.x}, Y=${bot.entity.position.y}, Z=${bot.entity.position.z}. - Bloco abaixo de mim: ${bot.blockAt(bot.entity.position.offset(0, -1, 0))?.name || 'nenhum'}.
-
-    Pergunta do jogador: "${message}"
-
-    Responda com base nas informações acima.`;
-
-    try {
-      const response = await openai.chat.completions.create({
-        messages: [{ role: 'user', content: prompt }],
-        model: 'gpt-3.5-turbo',
-      });
-
-      const answer = response.choices[0].message.content.trim();
-      bot.chat(answer);
-    } catch (err) {
-      console.error('Erro ao chamar a API OpenAI:', err);
-      bot.chat("Desculpe, ocorreu um erro ao processar sua solicitação.");
+        const question = `Me diga informações sobre o bloco ${block.name}, ele tem ID ${block.type} e está no Minecraft.`;
+        try {
+            const response = await openai.createCompletion({
+                model: 'text-davinci-003',
+                prompt: question,
+                max_tokens: 150,
+            });
+            bot.chat(response.data.choices[0].text.trim());
+        } catch (err) {
+            bot.chat('Erro ao obter informações do bloco.');
+            console.error(err);
+        }
     }
-  });
 
-  bot.on('kicked', (reason) => console.log(`Bot foi desconectado: ${reason}`));
-  bot.on('error', (err) => console.log(`Erro: ${err.message}`));
-}
+    if (message.startsWith('minerar')) {
+        const blockName = message.split(' ')[1];
+        const blockToMine = bot.findBlock({
+            matching: (block) => block.name === blockName,
+            maxDistance: 64
+        });
 
-createBot();
+        if (!blockToMine) {
+            bot.chat(`Não encontrei nenhum bloco ${blockName} por perto.`);
+            return;
+        }
+
+        bot.chat(`Indo minerar o bloco ${blockName}!`);
+        const mcData = require('minecraft-data')(bot.version);
+        const movements = new Movements(bot, mcData);
+        bot.pathfinder.setMovements(movements);
+        bot.pathfinder.setGoal(new goals.GoalBlock(blockToMine.position.x, blockToMine.position.y, blockToMine.position.z));
+
+        bot.once('goal_reached', () => {
+            bot.dig(blockToMine, (err) => {
+                if (err) {
+                    bot.chat('Houve um erro ao minerar o bloco.');
+                    console.error(err);
+                } else {
+                    bot.chat(`Bloco ${blockName} minerado com sucesso!`);
+                }
+            });
+        });
+    }
+});

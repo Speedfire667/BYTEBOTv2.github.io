@@ -9,7 +9,7 @@ const openai = new OpenAIApi(openaiConfig);
 
 // Configuração do bot
 const bot = mineflayer.createBot({
-    host: 'BYTEserver.aternos.me', // Altere para o endereço do servidor
+    host: 'BYTEServer.aternos.me', // Altere para o endereço do servidor
     port: 12444, // Altere para a porta do servidor
     username: 'OfflineBot', // Nome do bot
     version: '1.12.1', // Altere para a versão desejada

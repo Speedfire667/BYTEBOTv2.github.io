@@ -1,5 +1,4 @@
 const mineflayer = require('mineflayer');
-const { pathfinder, Movements, goals } = require('mineflayer-pathfinder');
 const { Configuration, OpenAIApi } = require('openai');
 
 // Configuração da IA
@@ -13,11 +12,9 @@ const bot = mineflayer.createBot({
     host: 'BYTEserver.aternos.me', // Altere para o endereço do servidor
     port: 12444, // Altere para a porta do servidor
     username: 'OfflineBot', // Nome do bot
-    version: '1.16.1', // Altere para a versão desejada
+    version: '1.12.1', // Altere para a versão desejada
     offline: true
 });
-
-bot.loadPlugin(pathfinder);
 
 bot.once('spawn', () => {
     bot.chat('Olá! Estou online. Pergunte sobre blocos ou peça para minerar algo!');
@@ -60,20 +57,13 @@ bot.on('chat', async (username, message) => {
         }
 
         bot.chat(`Indo minerar o bloco ${blockName}!`);
-        const mcData = require('minecraft-data')(bot.version);
-        const movements = new Movements(bot, mcData);
-        bot.pathfinder.setMovements(movements);
-        bot.pathfinder.setGoal(new goals.GoalBlock(blockToMine.position.x, blockToMine.position.y, blockToMine.position.z));
-
-        bot.once('goal_reached', () => {
-            bot.dig(blockToMine, (err) => {
-                if (err) {
-                    bot.chat('Houve um erro ao minerar o bloco.');
-                    console.error(err);
-                } else {
-                    bot.chat(`Bloco ${blockName} minerado com sucesso!`);
-                }
-            });
+        bot.dig(blockToMine, (err) => {
+            if (err) {
+                bot.chat('Houve um erro ao minerar o bloco.');
+                console.error(err);
+            } else {
+                bot.chat(`Bloco ${blockName} minerado com sucesso!`);
+            }
         });
     }
 });

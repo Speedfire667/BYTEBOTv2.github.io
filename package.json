@@ -1,11 +1,14 @@
 {
   "name": "minecraft-bot",
   "version": "1.0.0",
-  "description": "Bot Minecraft",
-  "main": "index.js",
+  "description": "Bot Minecraft com Mineflayer e OpenAI",
+  "main": "Bot.js",
   "scripts": {
     "start": "node Bot.js"
   },
+  "keywords": ["minecraft", "bot", "mineflayer", "openai"],
+  "author": "Seu Nome",
+  "license": "MIT",
   "dependencies": {
     "mineflayer": "^4.4.0",
     "openai": "^4.0.0",

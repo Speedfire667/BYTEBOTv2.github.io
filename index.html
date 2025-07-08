@@ -3,58 +3,59 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Controle ByteBot 🕹️</title>
+  <title>ByteBot - Controle e Visão</title>
   <style>
     body {
+      margin: 0;
       background-color: #111;
       color: #eee;
       font-family: Arial, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
+      padding: 10px;
     }
 
     h1 {
+      margin: 20px 0 10px;
       font-size: 1.8rem;
-      margin-bottom: 10px;
+    }
+
+    #container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    #viewer {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: 2px solid #555;
+      border-radius: 10px;
+      margin: 10px 0;
     }
 
     #joystick {
       width: 200px;
       height: 200px;
-      position: relative;
-      margin: 20px;
-    }
-
-    a {
-      color: cyan;
-      text-decoration: none;
-      font-size: 1.1rem;
-      margin-top: 10px;
-    }
-
-    a:hover {
-      text-decoration: underline;
-    }
-
-    footer {
-      position: absolute;
-      bottom: 10px;
-      font-size: 0.9rem;
-      color: #888;
+      margin: 20px auto;
     }
   </style>
 </head>
 <body>
-  <h1>Controle ByteBot 🧠</h1>
-  <div id="joystick"></div>
+  <h1>🧠 ByteBot - Controle & Visão</h1>
 
-  <a href="https://levy-sbot-teste.onrender.com/viewer" target="_blank">🔍 Ver visão do bot</a>
+  <div id="container">
+    <iframe
+      id="viewer"
+      src="https://levy-sbot-teste.onrender.com/viewer"
+      allowfullscreen
+    ></iframe>
 
-  <footer>Feito com ❤️ por Mateus</footer>
+    <div id="joystick"></div>
+  </div>
 
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.0/nipplejs.min.js"></script>

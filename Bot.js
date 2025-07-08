@@ -4,84 +4,112 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 
-// 🎯 CONFIG DO SERVIDOR MINECRAFT
 const MC_HOST = 'Speedfire1237.aternos.me';
 const MC_PORT = 36424;
 const VERSION = '1.12.2';
 
-let bot = null, moveInterval, connectTimeout;
+let bot = null;
+let connectTimeout;
 
-// 🌐 EXPRESS / SOCKET.IO
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// 🎮 INTERFACE HTML EMBUTIDA
 const html = `
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>Controle do Bot</title>
-  <style>
-    body { background: #111; color: #fff; font-family: sans-serif; text-align: center; margin-top: 50px; }
-    button { padding: 15px 30px; font-size: 18px; margin: 5px; background: #333; color: white; border: none; border-radius: 8px; cursor: pointer; }
-    .grid { display: grid; grid-template-columns: repeat(3, 100px); grid-template-rows: repeat(3, 100px); gap: 10px; justify-content: center; }
-  </style>
+<meta charset="UTF-8" />
+<title>Controle + Viewer do Bot</title>
+<style>
+  body { background: #111; color: #fff; font-family: sans-serif; margin: 0; padding: 0; }
+  h1 { text-align: center; padding: 15px 0; }
+  #container { display: flex; height: 90vh; }
+  #controls {
+    width: 300px; background: #222; padding: 20px; box-sizing: border-box;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 15px;
+  }
+  button {
+    padding: 15px 25px;
+    font-size: 20px;
+    background: #333;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+  button:active {
+    background: #555;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 80px);
+    grid-template-rows: repeat(3, 80px);
+    gap: 10px;
+    justify-content: center;
+  }
+  iframe {
+    flex-grow: 1;
+    border: none;
+  }
+  p { text-align:center; margin:0; padding: 10px 0; }
+</style>
 </head>
 <body>
-  <h1>🎮 Controle do Bot</h1>
-  <div class="grid">
-    <div></div>
-    <button onclick="move('forward')">⬆️</button>
-    <div></div>
-    <button onclick="move('left')">⬅️</button>
-    <button onclick="move('jump')">🆙</button>
-    <button onclick="move('right')">➡️</button>
-    <div></div>
-    <button onclick="move('back')">⬇️</button>
-    <div></div>
+  <h1>🎮 Controle + Viewer do Bot</h1>
+  <div id="container">
+    <div id="controls">
+      <div class="grid">
+        <div></div>
+        <button onclick="move('forward')">⬆️</button>
+        <div></div>
+        <button onclick="move('left')">⬅️</button>
+        <button onclick="move('jump')">🆙</button>
+        <button onclick="move('right')">➡️</button>
+        <div></div>
+        <button onclick="move('back')">⬇️</button>
+        <div></div>
+      </div>
+    </div>
+    <iframe src="http://localhost:3007" title="Viewer do Bot"></iframe>
   </div>
-  <p style="margin-top:40px;">👁️ <a href="http://localhost:3007" target="_blank">Abrir viewer</a></p>
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    function move(dir) {
-      socket.emit('move', dir);
-    }
-  </script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  function move(dir) {
+    socket.emit('move', dir);
+  }
+</script>
 </body>
 </html>
 `;
 
-// Serve o HTML direto na raiz
 app.get('/', (req, res) => {
   res.send(html);
 });
 
-// ========= LOG FORMATADO =========
 function logVision(text) {
-  const line = `[${new Date().toISOString()}] ${text}`;
-  console.log(line);
+  console.log(\`[\${new Date().toISOString()}] \${text}\`);
 }
 
-// ========= CRIA O BOT =========
 function createBot() {
-  if (bot) return logVision('⚠️ Bot já está ativo');
+  if (bot) return logVision('⚠️ Bot já ativo');
 
-  const username = `ByteBot_${Math.floor(Math.random() * 9999)}`;
-  logVision(`🤖 Iniciando bot: ${username}`);
+  const username = \`ByteBot_\${Math.floor(Math.random() * 9999)}\`;
+  logVision(\`🤖 Iniciando bot: \${username}\`);
 
   bot = mineflayer.createBot({
     host: MC_HOST,
     port: MC_PORT,
     username,
     version: VERSION,
-    auth: 'offline'
+    auth: 'offline',
   });
 
   connectTimeout = setTimeout(() => {
-    logVision('⏰ Timeout de conexão');
+    logVision('⏰ Timeout conexão');
     bot.quit();
     cleanupBot();
     scheduleReconnect();
@@ -89,31 +117,27 @@ function createBot() {
 
   bot.once('spawn', () => {
     clearTimeout(connectTimeout);
-    logVision(`✅ Bot conectado: ${bot.username}`);
+    logVision(\`✅ Bot conectado: \${bot.username}\`);
     mineflayerViewer(bot, { port: 3007, firstPerson: false });
-    logVision('🎥 Viewer 3ª pessoa: http://localhost:3007');
+    logVision('🎥 Viewer rodando na porta 3007 (iframe embutido)');
   });
 
-  bot.on('login', () => logVision('🔐 Login com sucesso'));
+  bot.on('login', () => logVision('🔐 Logado com sucesso'));
   bot.once('end', () => { logVision('🔌 Desconectado'); cleanupBot(); scheduleReconnect(); });
-  bot.once('kicked', reason => { logVision(`🚫 Kickado: ${reason}`); cleanupBot(); scheduleReconnect(); });
-  bot.on('error', err => { logVision(`❌ Erro: ${err.message}`); cleanupBot(); scheduleReconnect(); });
+  bot.once('kicked', reason => { logVision(\`🚫 Kickado: \${reason}\`); cleanupBot(); scheduleReconnect(); });
+  bot.on('error', err => { logVision(\`❌ Erro: \${err.message}\`); cleanupBot(); scheduleReconnect(); });
 }
 
-// ========= LIMPA O BOT =========
 function cleanupBot() {
-  clearInterval(moveInterval);
   clearTimeout(connectTimeout);
   if (bot) try { bot.quit(); } catch { } finally { bot = null; }
 }
 
-// ========= RECONNECT =========
 function scheduleReconnect() {
-  logVision('🔄 Tentando reconectar em 10s...');
-  setTimeout(() => createBot(), 10000);
+  logVision('🔄 Reconectando em 10s...');
+  setTimeout(createBot, 10000);
 }
 
-// ========= CONTROLE SOCKET =========
 io.on('connection', socket => {
   logVision('🕹️ Controle conectado');
   socket.on('move', dir => {
@@ -124,9 +148,8 @@ io.on('connection', socket => {
   });
 });
 
-// ========= INICIA SERVIDOR WEB E BOT =========
 server.listen(3000, () => {
-  logVision('🌐 Interface de controle: http://localhost:3000');
+  logVision('🌐 Interface: http://localhost:3000');
 });
 
 createBot();

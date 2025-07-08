@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Controle do Bot</title>
+  <style>
+    body {
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+      margin: 0;
+    }
+    h1 {
+      text-align: center;
+      padding: 15px 0;
+    }
+    #container {
+      display: flex;
+      flex-direction: row;
+      height: 90vh;
+    }
+    iframe {
+      flex: 1;
+      border: none;
+    }
+    #joystick-container {
+      width: 300px;
+      background: #222;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #joystick {
+      width: 200px;
+      height: 200px;
+      margin: 10px;
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Controle Remoto do Bot</h1>
+  <div id="container">
+    <iframe id="viewer" src="http://SEU_IP_PUBLICO:3007" title="Bot Viewer"></iframe>
+    <div id="joystick-container">
+      <h2>Controle</h2>
+      <div id="joystick"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.0/nipplejs.min.js"></script>
+  <script>
+    const socket = io("http://SEU_IP_PUBLICO:3000");
+
+    const joystick = nipplejs.create({
+      zone: document.getElementById('joystick'),
+      mode: 'static',
+      position: { left: '50%', top: '50%' },
+      color: 'white'
+    });
+
+    let currentDir = null;
+    let clearTimeoutRef = null;
+
+    joystick.on('dir', (evt, data) => {
+      const dir = data.direction?.angle;
+      if (!dir) return;
+
+      let mcDir;
+      switch (dir) {
+        case 'up': mcDir = 'forward'; break;
+        case 'down': mcDir = 'back'; break;
+        case 'left': mcDir = 'left'; break;
+        case 'right': mcDir = 'right'; break;
+      }
+
+      if (mcDir && mcDir !== currentDir) {
+        socket.emit('move', mcDir);
+        currentDir = mcDir;
+
+        clearTimeout(clearTimeoutRef);
+        clearTimeoutRef = setTimeout(() => {
+          socket.emit('move', 'stop');
+          currentDir = null;
+        }, 500);
+      }
+    });
+
+    joystick.on('end', () => {
+      socket.emit('move', 'stop');
+      currentDir = null;
+    });
+  </script>
+</body>
+</html>

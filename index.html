@@ -1,117 +1,82 @@
+<!-- public/index.html -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ByteBot - Controle e Visão</title>
+  <title>ByteBot - Controle & Visão</title>
   <style>
     body {
-      margin: 0;
-      background-color: #111;
-      color: #eee;
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 10px;
+      background: #111;
+      color: #fff;
+      font-family: sans-serif;
+      text-align: center;
+      padding: 1rem;
     }
-
-    h1 {
-      margin: 20px 0 10px;
-      font-size: 1.8rem;
-    }
-
-    #container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 100%;
-      max-width: 900px;
-    }
-
-    #viewer {
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      border: 2px solid #555;
+    iframe {
+      width: 90%;
+      height: 60vh;
+      border: 2px solid #333;
       border-radius: 10px;
-      margin: 10px 0;
+      margin-bottom: 20px;
     }
-
-    .dpad {
-      display: grid;
-      grid-template-columns: 60px 60px 60px;
-      grid-template-rows: 60px 60px 60px;
-      gap: 10px;
-      margin-top: 20px;
-    }
-
-    .dpad button {
-      background-color: #444;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    .dpad button:hover {
-      background-color: #666;
-    }
-
-    .empty {
-      background: transparent;
-      pointer-events: none;
+    #joystick {
+      width: 200px;
+      height: 200px;
+      margin: auto;
     }
   </style>
 </head>
 <body>
-  <h1>🧠 ByteBot - Controle & Visão</h1>
+  <h1>🤖 ByteBot - Controle & Visão</h1>
+  <iframe src="/viewer" allowfullscreen></iframe>
 
-  <div id="container">
-    <iframe
-      id="viewer"
-      src="https://levy-sbot-teste.onrender.com"
-      allowfullscreen
-    ></iframe>
-
-    <div class="dpad">
-      <div class="empty"></div>
-      <button data-dir="forward">⬆️</button>
-      <div class="empty"></div>
-      <button data-dir="left">⬅️</button>
-      <button data-dir="stop">⏹️</button>
-      <button data-dir="right">➡️</button>
-      <div class="empty"></div>
-      <button data-dir="back">⬇️</button>
-      <div class="empty"></div>
-    </div>
-  </div>
+  <div id="joystick"></div>
 
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.0/nipplejs.min.js"></script>
   <script>
-    const socket = io("https://levy-sbot-teste.onrender.com");
+    const socket = io();
 
-    socket.on("connect", () => console.log("✅ Conectado ao WebSocket!"));
-    socket.on("disconnect", () => console.log("❌ Desconectado do WebSocket!"));
+    socket.on('connect', () => {
+      console.log('✅ Conectado ao servidor WebSocket');
+    });
 
-    const buttons = document.querySelectorAll("button[data-dir]");
-    let timeoutId;
+    const joystick = nipplejs.create({
+      zone: document.getElementById('joystick'),
+      mode: 'static',
+      position: { left: '50%', top: '50%' },
+      color: 'white'
+    });
 
-    buttons.forEach(btn => {
-      btn.addEventListener("click", () => {
-        const dir = btn.getAttribute("data-dir");
-        socket.emit("move", dir);
-        console.log("📤 Enviado:", dir);
+    let currentDir = null;
+    let timeout = null;
 
-        if (dir !== "stop") {
-          clearTimeout(timeoutId);
-          timeoutId = setTimeout(() => {
-            socket.emit("move", "stop");
-            console.log("⛔ AutoStop enviado");
-          }, 500); // meio segundo de movimento
-        }
-      });
+    joystick.on('dir', (evt, data) => {
+      const dir = data.direction?.angle;
+      if (!dir) return;
+
+      let moveDir = {
+        up: 'forward',
+        down: 'back',
+        left: 'left',
+        right: 'right'
+      }[dir];
+
+      if (moveDir && moveDir !== currentDir) {
+        socket.emit('move', moveDir);
+        currentDir = moveDir;
+
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          socket.emit('move', 'stop');
+          currentDir = null;
+        }, 400);
+      }
+    });
+
+    joystick.on('end', () => {
+      socket.emit('move', 'stop');
+      currentDir = null;
     });
   </script>
 </body>

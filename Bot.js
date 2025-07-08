@@ -49,21 +49,38 @@ function createBot() {
     bot.quit();
     cleanupBot();
     scheduleReconnect();
-  }, 15000);
+  }, 30000); // aumentei o timeout pra 30s
 
   bot.once('spawn', () => {
     clearTimeout(connectTimeout);
     logVision(`✅ Bot conectado: ${bot.username}`);
 
-    // Viewer em http://localhost:3000/viewer
-    mineflayerViewer(bot, { port: server, path: '/viewer' });
-    logVision('🎥 Viewer ativado em /viewer');
+    // Viewer em primeira pessoa
+    mineflayerViewer(bot, {
+      port: server,
+      path: '/viewer',
+      firstPerson: true // 👈 Ativando a visão em primeira pessoa!
+    });
+
+    logVision('🎥 Viewer em primeira pessoa ativado em /viewer');
   });
 
   bot.on('login', () => logVision('🔐 Login realizado'));
-  bot.once('end', () => { logVision('🔌 Desconectado'); cleanupBot(); scheduleReconnect(); });
-  bot.once('kicked', reason => { logVision(`🚫 Kickado: ${reason}`); cleanupBot(); scheduleReconnect(); });
-  bot.on('error', err => { logVision(`❌ Erro: ${err.message}`); cleanupBot(); scheduleReconnect(); });
+  bot.once('end', () => {
+    logVision('🔌 Desconectado');
+    cleanupBot();
+    scheduleReconnect();
+  });
+  bot.once('kicked', reason => {
+    logVision(`🚫 Kickado: ${reason}`);
+    cleanupBot();
+    scheduleReconnect();
+  });
+  bot.on('error', err => {
+    logVision(`❌ Erro: ${err.message}`);
+    cleanupBot();
+    scheduleReconnect();
+  });
 }
 
 function cleanupBot() {
@@ -79,7 +96,7 @@ function scheduleReconnect() {
   setTimeout(createBot, 10000);
 }
 
-// Socket.io para controle
+// WebSocket para controle
 io.on('connection', (socket) => {
   logVision('📡 Controle conectado via WebSocket');
 
@@ -97,7 +114,7 @@ io.on('connection', (socket) => {
 });
 
 server.listen(3000, () => {
-  logVision('🚀 API + Viewer em http://localhost:3000');
+  logVision('🚀 API + Viewer rodando em http://localhost:3000');
 });
 
 createBot();

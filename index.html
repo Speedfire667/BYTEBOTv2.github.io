@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ByteBot - Controle & Visão</title>
+  <title>ByteBot - Controle e Visão</title>
   <style>
     body {
       margin: 0;
@@ -37,10 +37,31 @@
       margin: 10px 0;
     }
 
-    #joystick {
-      width: 200px;
-      height: 200px;
-      margin: 20px auto;
+    .dpad {
+      display: grid;
+      grid-template-columns: 60px 60px 60px;
+      grid-template-rows: 60px 60px 60px;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .dpad button {
+      background-color: #444;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .dpad button:hover {
+      background-color: #666;
+    }
+
+    .empty {
+      background: transparent;
+      pointer-events: none;
     }
   </style>
 </head>
@@ -54,51 +75,43 @@
       allowfullscreen
     ></iframe>
 
-    <div id="joystick"></div>
+    <div class="dpad">
+      <div class="empty"></div>
+      <button data-dir="forward">⬆️</button>
+      <div class="empty"></div>
+      <button data-dir="left">⬅️</button>
+      <button data-dir="stop">⏹️</button>
+      <button data-dir="right">➡️</button>
+      <div class="empty"></div>
+      <button data-dir="back">⬇️</button>
+      <div class="empty"></div>
+    </div>
   </div>
 
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.0/nipplejs.min.js"></script>
   <script>
-    const socket = io("https://levy-sbot-teste.onrender.com"); // GARANTA que é o mesmo host da sua API!
+    const socket = io("https://levy-sbot-teste.onrender.com");
 
-    const joystick = nipplejs.create({
-      zone: document.getElementById('joystick'),
-      mode: 'static',
-      position: { left: '50%', top: '50%' },
-      color: 'white'
-    });
+    socket.on("connect", () => console.log("✅ Conectado ao WebSocket!"));
+    socket.on("disconnect", () => console.log("❌ Desconectado do WebSocket!"));
 
-    let currentDir = null;
-    let clearTimeoutRef = null;
+    const buttons = document.querySelectorAll("button[data-dir]");
+    let timeoutId;
 
-    joystick.on('dir', (evt, data) => {
-      const dir = data.direction?.angle;
-      if (!dir) return;
+    buttons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const dir = btn.getAttribute("data-dir");
+        socket.emit("move", dir);
+        console.log("📤 Enviado:", dir);
 
-      let mcDir;
-      switch (dir) {
-        case 'up': mcDir = 'forward'; break;
-        case 'down': mcDir = 'back'; break;
-        case 'left': mcDir = 'left'; break;
-        case 'right': mcDir = 'right'; break;
-      }
-
-      if (mcDir && mcDir !== currentDir) {
-        socket.emit('move', mcDir);
-        currentDir = mcDir;
-
-        clearTimeout(clearTimeoutRef);
-        clearTimeoutRef = setTimeout(() => {
-          socket.emit('move', 'stop');
-          currentDir = null;
-        }, 500);
-      }
-    });
-
-    joystick.on('end', () => {
-      socket.emit('move', 'stop');
-      currentDir = null;
+        if (dir !== "stop") {
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            socket.emit("move", "stop");
+            console.log("⛔ AutoStop enviado");
+          }, 500); // meio segundo de movimento
+        }
+      });
     });
   </script>
 </body>

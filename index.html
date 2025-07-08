@@ -2,58 +2,64 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Controle do Bot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Controle ByteBot 🕹️</title>
   <style>
     body {
-      background: #111;
-      color: white;
-      font-family: sans-serif;
-      margin: 0;
-    }
-    h1 {
-      text-align: center;
-      padding: 15px 0;
-    }
-    #container {
-      display: flex;
-      flex-direction: row;
-      height: 90vh;
-    }
-    iframe {
-      flex: 1;
-      border: none;
-    }
-    #joystick-container {
-      width: 300px;
-      background: #222;
+      background-color: #111;
+      color: #eee;
+      font-family: Arial, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      height: 100vh;
+      margin: 0;
     }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+    }
+
     #joystick {
       width: 200px;
       height: 200px;
-      margin: 10px;
       position: relative;
+      margin: 20px;
+    }
+
+    a {
+      color: cyan;
+      text-decoration: none;
+      font-size: 1.1rem;
+      margin-top: 10px;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    footer {
+      position: absolute;
+      bottom: 10px;
+      font-size: 0.9rem;
+      color: #888;
     }
   </style>
 </head>
 <body>
-  <h1>🎮 Controle Remoto do Bot</h1>
-  <div id="container">
-    <iframe id="viewer" src="http://SEU_IP_PUBLICO:3007" title="Bot Viewer"></iframe>
-    <div id="joystick-container">
-      <h2>Controle</h2>
-      <div id="joystick"></div>
-    </div>
-  </div>
+  <h1>Controle ByteBot 🧠</h1>
+  <div id="joystick"></div>
+
+  <a href="https://levy-sbot-teste.onrender.com/viewer" target="_blank">🔍 Ver visão do bot</a>
+
+  <footer>Feito com ❤️ por Mateus</footer>
 
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.0/nipplejs.min.js"></script>
   <script>
-    const socket = io("https://levy-sbot-teste.onrender.com/viewer");
-
+    const socket = io("https://levy-sbot-teste.onrender.com");
     const joystick = nipplejs.create({
       zone: document.getElementById('joystick'),
       mode: 'static',

@@ -13,6 +13,7 @@ let bot;
 let wsClients = [];
 let reconnecting = false;
 
+// Nome aleatório
 function randomName() {
   return 'Bot' + Math.floor(Math.random() * 9999999);
 }
@@ -24,8 +25,8 @@ function connectBot() {
   bot = mineflayer.createBot({
     host: 'Speedfire1237.aternos.me',
     port: 36424,
-    version: '1.12.2'
     username: username,
+    version: '1.12.2'
   });
 
   bot.once('spawn', () => {
@@ -77,15 +78,9 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-app.get('/api/randomname', (req, res) => {
-  res.json({ name: randomName() });
-});
+app.use(express.static(path.join(__dirname))); // Serve index.html
 
-// Serve frontend
-app.get('/', (_, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
+// WS para controle
 wss.on('connection', ws => {
   wsClients.push(ws);
   ws.on('message', msg => {

@@ -91,14 +91,14 @@ app.get('/', (req, res) => {
 });
 
 function logVision(text) {
-  console.log(\`[\${new Date().toISOString()}] \${text}\`);
+  console.log(`[${new Date().toISOString()}] ${text}`);
 }
 
 function createBot() {
   if (bot) return logVision('⚠️ Bot já ativo');
 
-  const username = \`ByteBot_\${Math.floor(Math.random() * 9999)}\`;
-  logVision(\`🤖 Iniciando bot: \${username}\`);
+  const username = `ByteBot_${Math.floor(Math.random() * 9999)}`;
+  logVision(`🤖 Iniciando bot: ${username}`);
 
   bot = mineflayer.createBot({
     host: MC_HOST,
@@ -117,15 +117,15 @@ function createBot() {
 
   bot.once('spawn', () => {
     clearTimeout(connectTimeout);
-    logVision(\`✅ Bot conectado: \${bot.username}\`);
+    logVision(`✅ Bot conectado: ${bot.username}`);
     mineflayerViewer(bot, { port: 3007, firstPerson: false });
     logVision('🎥 Viewer rodando na porta 3007 (iframe embutido)');
   });
 
   bot.on('login', () => logVision('🔐 Logado com sucesso'));
   bot.once('end', () => { logVision('🔌 Desconectado'); cleanupBot(); scheduleReconnect(); });
-  bot.once('kicked', reason => { logVision(\`🚫 Kickado: \${reason}\`); cleanupBot(); scheduleReconnect(); });
-  bot.on('error', err => { logVision(\`❌ Erro: \${err.message}\`); cleanupBot(); scheduleReconnect(); });
+  bot.once('kicked', reason => { logVision(`🚫 Kickado: ${reason}`); cleanupBot(); scheduleReconnect(); });
+  bot.on('error', err => { logVision(`❌ Erro: ${err.message}`); cleanupBot(); scheduleReconnect(); });
 }
 
 function cleanupBot() {

@@ -25,7 +25,7 @@ function connectBot() {
     host: 'Speedfire1237.aternos.me',
     port: 36424,
     version: '1.12.2'
-    username
+    username,
   });
 
   bot.once('spawn', () => {

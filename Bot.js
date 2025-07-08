@@ -30,7 +30,6 @@ function createBot() {
 
   bot = mineflayer.createBot({ host: MC_HOST, port: MC_PORT, username, version: VERSION, auth: 'offline' });
 
-  // radar plugin com controle manual
   radarPlugin(bot, { port: 9000 });
   logVision('🕹️ Radar + controle na web: http://localhost:9000');
 
@@ -71,10 +70,25 @@ function createBot() {
     }, 1000);
   });
 
-  bot.on('chat', (u, msg) => u !== bot.username && logVision(`💬 ${u}: ${msg}`));
-  bot.once('end', () => logVision('🔌 Bot end'), cleanupBot(), scheduleReconnect());
-  bot.once('kicked', reason => logVision(`🚫 Kickado: ${reason}`), cleanupBot(), scheduleReconnect());
-  bot.on('error', err => logVision(`❌ Erro: ${err.message}`), cleanupBot(), scheduleReconnect());
+  bot.on('chat', (u, msg) => {
+    if (u !== bot.username) logVision(`💬 ${u}: ${msg}`);
+  });
+
+  bot.once('end', () => {
+    logVision('🔌 Bot end');
+    cleanupBot();
+    scheduleReconnect();
+  });
+  bot.once('kicked', (reason) => {
+    logVision(`🚫 Kickado: ${reason}`);
+    cleanupBot();
+    scheduleReconnect();
+  });
+  bot.on('error', (err) => {
+    logVision(`❌ Erro: ${err.message}`);
+    cleanupBot();
+    scheduleReconnect();
+  });
   bot.on('login', () => logVision('🔐 Logado com sucesso'));
 }
 
@@ -88,21 +102,33 @@ function cleanupBot() {
 function scheduleReconnect() {
   if (reconnectTimeout) return;
   logVision('🔄 Reconectando em 10s...');
-  reconnectTimeout = setTimeout(() => reconnectTimeout = null, createBot(), 10000);
+  reconnectTimeout = setTimeout(() => {
+    reconnectTimeout = null;
+    createBot();
+  }, 10000);
 }
 
-// Web server com radar básico e websocket
-const html = `<!DOCTYPE html><html>...seu html radar aqui...</html>`;
+// Aqui você coloca seu HTML se quiser servir interface web no mesmo server
+const html = `<!DOCTYPE html><html><body><h1>Radar & Controle</h1><p>Implemente aqui sua interface.</p></body></html>`;
 
 const server = http.createServer((req, res) => {
-  if (req.url === '/') res.end(html);
-  else { res.writeHead(404); res.end('Not Found'); }
+  if (req.url === '/') {
+    res.writeHead(200, {'Content-Type': 'text/html'});
+    res.end(html);
+  } else {
+    res.writeHead(404);
+    res.end('Not Found');
+  }
 });
+
 const wss = new WebSocket.Server({ server });
 wss.on('connection', ws => {
   clients.push(ws);
   logVision('📡 Cliente conectado');
-  ws.on('close', () => { clients = clients.filter(c => c !== ws); logVision('🔌 Cliente desconectado') });
+  ws.on('close', () => {
+    clients = clients.filter(c => c !== ws);
+    logVision('🔌 Cliente desconectado');
+  });
   ws.on('error', e => logVision(`❗ WS erro: ${e.message}`));
 });
 

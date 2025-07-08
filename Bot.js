@@ -1,69 +1,112 @@
 const mineflayer = require('mineflayer');
-const { Configuration, OpenAIApi } = require('openai');
+const radarPlugin = require('mineflayer-radar')(mineflayer);
+const { mineflayer: mineflayerViewer } = require('prismarine-viewer');
+const http = require('http');
+const WebSocket = require('ws');
 
-// Configuração da IA
-const openaiConfig = new Configuration({
-    apiKey: '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' // Substitua pela sua chave da OpenAI
+const PORT = process.env.PORT || 8080;
+const MC_HOST = 'Speedfire1237.aternos.me';
+const MC_PORT = 36424;
+const VERSION = '1.12.2';
+
+let bot = null, clients = [], reconnectTimeout;
+let moveInterval, updateInterval, connectTimeout;
+
+function broadcast(data) {
+  const json = JSON.stringify(data);
+  clients.forEach(ws => ws.readyState === WebSocket.OPEN && ws.send(json));
+}
+
+function logVision(text) {
+  const line = `[${new Date().toISOString()}] ${text}`;
+  console.log(line);
+  broadcast({ log: line });
+}
+
+function createBot() {
+  if (bot) return logVision('⚠️ Bot já ativo');
+  const username = `ByteBot_${Math.floor(Math.random()*9999)}`;
+  logVision(`🤖 Iniciando bot: ${username}`);
+
+  bot = mineflayer.createBot({ host: MC_HOST, port: MC_PORT, username, version: VERSION, auth: 'offline' });
+
+  // radar plugin com controle manual
+  radarPlugin(bot, { port: 9000 });
+  logVision('🕹️ Radar + controle na web: http://localhost:9000');
+
+  connectTimeout = setTimeout(() => {
+    logVision('⏰ Timeout conexão');
+    bot.quit(); cleanupBot(); scheduleReconnect();
+  }, 15000);
+
+  bot.once('spawn', () => {
+    clearTimeout(connectTimeout);
+    logVision(`✅ Bot conectado: ${bot.username}`);
+
+    mineflayerViewer(bot, { port: 3007, firstPerson: true });
+    logVision('🎥 FPV ativo: http://localhost:3007');
+
+    if (moveInterval) clearInterval(moveInterval);
+    moveInterval = setInterval(() => {
+      if (!bot.entity) return;
+      const dirs = ['forward','back','left','right'];
+      const dir = dirs[Math.floor(Math.random()*dirs.length)];
+      const jump = Math.random()<0.4;
+      bot.clearControlStates();
+      bot.setControlState(dir, true);
+      if (jump) bot.setControlState('jump', true);
+      setTimeout(() => bot.clearControlStates(), 800);
+    }, 8000);
+
+    if (updateInterval) clearInterval(updateInterval);
+    updateInterval = setInterval(() => {
+      if (!bot.entity) return;
+      broadcast({
+        position: bot.entity.position,
+        players: Object.values(bot.players).map(p => ({
+          username: p.username,
+          pos: p.entity ? p.entity.position : null
+        }))
+      });
+    }, 1000);
+  });
+
+  bot.on('chat', (u, msg) => u !== bot.username && logVision(`💬 ${u}: ${msg}`));
+  bot.once('end', () => logVision('🔌 Bot end'), cleanupBot(), scheduleReconnect());
+  bot.once('kicked', reason => logVision(`🚫 Kickado: ${reason}`), cleanupBot(), scheduleReconnect());
+  bot.on('error', err => logVision(`❌ Erro: ${err.message}`), cleanupBot(), scheduleReconnect());
+  bot.on('login', () => logVision('🔐 Logado com sucesso'));
+}
+
+function cleanupBot() {
+  clearInterval(moveInterval);
+  clearInterval(updateInterval);
+  clearTimeout(connectTimeout);
+  if (bot) try { bot.quit() } catch{} finally { bot = null }
+}
+
+function scheduleReconnect() {
+  if (reconnectTimeout) return;
+  logVision('🔄 Reconectando em 10s...');
+  reconnectTimeout = setTimeout(() => reconnectTimeout = null, createBot(), 10000);
+}
+
+// Web server com radar básico e websocket
+const html = `<!DOCTYPE html><html>...seu html radar aqui...</html>`;
+
+const server = http.createServer((req, res) => {
+  if (req.url === '/') res.end(html);
+  else { res.writeHead(404); res.end('Not Found'); }
 });
-const openai = new OpenAIApi(openaiConfig);
-
-// Configuração do bot
-const bot = mineflayer.createBot({
-    host: 'BYTEServer.aternos.me', // Altere para o endereço do servidor
-    port: 12444, // Altere para a porta do servidor
-    username: 'OfflineBot', // Nome do bot
-    version: '1.12.1', // Altere para a versão desejada
-    offline: true
+const wss = new WebSocket.Server({ server });
+wss.on('connection', ws => {
+  clients.push(ws);
+  logVision('📡 Cliente conectado');
+  ws.on('close', () => { clients = clients.filter(c => c !== ws); logVision('🔌 Cliente desconectado') });
+  ws.on('error', e => logVision(`❗ WS erro: ${e.message}`));
 });
 
-bot.once('spawn', () => {
-    bot.chat('Olá! Estou online. Pergunte sobre blocos ou peça para minerar algo!');
-});
-
-bot.on('chat', async (username, message) => {
-    if (username === bot.username) return;
-
-    if (message.startsWith('qual seu bloco')) {
-        const block = bot.blockAtCursor(); // Pega o bloco que o bot está olhando
-        if (!block) {
-            bot.chat('Não estou olhando para nenhum bloco.');
-            return;
-        }
-
-        const question = `Me diga informações sobre o bloco ${block.name}, ele tem ID ${block.type} e está no Minecraft.`;
-        try {
-            const response = await openai.createCompletion({
-                model: 'text-davinci-003',
-                prompt: question,
-                max_tokens: 150,
-            });
-            bot.chat(response.data.choices[0].text.trim());
-        } catch (err) {
-            bot.chat('Erro ao obter informações do bloco.');
-            console.error(err);
-        }
-    }
-
-    if (message.startsWith('minerar')) {
-        const blockName = message.split(' ')[1];
-        const blockToMine = bot.findBlock({
-            matching: (block) => block.name === blockName,
-            maxDistance: 64
-        });
-
-        if (!blockToMine) {
-            bot.chat(`Não encontrei nenhum bloco ${blockName} por perto.`);
-            return;
-        }
-
-        bot.chat(`Indo minerar o bloco ${blockName}!`);
-        bot.dig(blockToMine, (err) => {
-            if (err) {
-                bot.chat('Houve um erro ao minerar o bloco.');
-                console.error(err);
-            } else {
-                bot.chat(`Bloco ${blockName} minerado com sucesso!`);
-            }
-        });
-    }
+server.listen(PORT, () => {
+  console.log(`🌐 Interface radar: http://localhost:${PORT}`);
+  createBot();
 });

@@ -1,9 +1,8 @@
 const mineflayer = require('mineflayer');
-const { mineflayer: mineflayerViewer } = require('prismarine-viewer');
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const path = require('path');
+const { mineflayer: mineflayerViewer } = require('prismarine-viewer');
 
 const MC_HOST = 'Speedfire1237.aternos.me';
 const MC_PORT = 36424;
@@ -16,23 +15,23 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "*", // Libera para qualquer origem (como GitHub Pages)
+    origin: "*",
     methods: ["GET", "POST"]
   }
 });
 
-// Serve API simples
+// API básica
 app.get('/', (req, res) => {
-  res.send('🟢 Bot ativo!');
+  res.send('🟢 ByteBot com Viewer rodando!');
 });
 
-// Viewer é externo na porta 3007
 function logVision(text) {
   console.log(`[${new Date().toISOString()}] ${text}`);
 }
 
+// Criação do bot
 function createBot() {
-  if (bot) return logVision('⚠️ Bot já ativo');
+  if (bot) return logVision('⚠️ Bot já está rodando');
 
   const username = `ByteBot_${Math.floor(Math.random() * 9999)}`;
   logVision(`🤖 Iniciando bot: ${username}`);
@@ -46,7 +45,7 @@ function createBot() {
   });
 
   connectTimeout = setTimeout(() => {
-    logVision('⏰ Timeout conexão');
+    logVision('⏰ Timeout de conexão');
     bot.quit();
     cleanupBot();
     scheduleReconnect();
@@ -55,11 +54,13 @@ function createBot() {
   bot.once('spawn', () => {
     clearTimeout(connectTimeout);
     logVision(`✅ Bot conectado: ${bot.username}`);
-    mineflayerViewer(bot, { port: 3007, firstPerson: false });
-    logVision('🎥 Viewer em: http://SEU_IP_PUBLICO:3007');
+
+    // Viewer em http://localhost:3000/viewer
+    mineflayerViewer(bot, { port: server, path: '/viewer' });
+    logVision('🎥 Viewer ativado em /viewer');
   });
 
-  bot.on('login', () => logVision('🔐 Logado com sucesso'));
+  bot.on('login', () => logVision('🔐 Login realizado'));
   bot.once('end', () => { logVision('🔌 Desconectado'); cleanupBot(); scheduleReconnect(); });
   bot.once('kicked', reason => { logVision(`🚫 Kickado: ${reason}`); cleanupBot(); scheduleReconnect(); });
   bot.on('error', err => { logVision(`❌ Erro: ${err.message}`); cleanupBot(); scheduleReconnect(); });
@@ -67,28 +68,36 @@ function createBot() {
 
 function cleanupBot() {
   clearTimeout(connectTimeout);
-  if (bot) try { bot.quit(); } catch { } finally { bot = null; }
+  if (bot) {
+    try { bot.quit(); } catch { }
+    bot = null;
+  }
 }
 
 function scheduleReconnect() {
-  logVision('🔄 Reconectando em 10s...');
+  logVision('🔄 Reconectando em 10 segundos...');
   setTimeout(createBot, 10000);
 }
 
-// Controle remoto via WebSocket
-io.on('connection', socket => {
+// Socket.io para controle
+io.on('connection', (socket) => {
   logVision('📡 Controle conectado via WebSocket');
-  socket.on('move', dir => {
+
+  socket.on('move', (dir) => {
     if (!bot) return;
     bot.clearControlStates();
+
     if (dir !== 'stop') {
       bot.setControlState(dir, true);
+      logVision(`➡️ Movendo: ${dir}`);
+    } else {
+      logVision('⛔ Parando movimento');
     }
   });
 });
 
 server.listen(3000, () => {
-  logVision('🚀 API ativa: http://localhost:3000');
+  logVision('🚀 API + Viewer em http://localhost:3000');
 });
 
 createBot();

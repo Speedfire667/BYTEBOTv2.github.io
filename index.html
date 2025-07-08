@@ -1,82 +1,128 @@
-<!-- public/index.html -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>ByteBot - Controle & Visão</title>
+  <title>Bot Minecraft API + Controle Remoto</title>
   <style>
     body {
-      background: #111;
-      color: #fff;
-      font-family: sans-serif;
+      margin: 0;
+      background: #000;
+      color: white;
       text-align: center;
-      padding: 1rem;
+      font-family: sans-serif;
     }
-    iframe {
-      width: 90%;
-      height: 60vh;
-      border: 2px solid #333;
-      border-radius: 10px;
-      margin-bottom: 20px;
+    #viewer {
+      width: 100vw;
+      height: 80vh;
     }
     #joystick {
-      width: 200px;
-      height: 200px;
-      margin: auto;
+      width: 150px;
+      height: 150px;
+      background: #444;
+      border-radius: 50%;
+      margin: 10px auto;
+      position: relative;
+      touch-action: none;
+    }
+    #stick {
+      width: 60px;
+      height: 60px;
+      background: #888;
+      border-radius: 50%;
+      position: absolute;
+      top: 45px;
+      left: 45px;
+    }
+    #status {
+      margin-top: 10px;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <h1>🤖 ByteBot - Controle & Visão</h1>
-  <iframe src="/viewer" allowfullscreen></iframe>
+  <h1>👁️ Bot Minecraft API + Controle Remoto</h1>
+  <div id="viewer"></div>
+  <div id="joystick"><div id="stick"></div></div>
+  <div id="status">Status do bot: <span id="botStatus">Desconectado</span></div>
 
-  <div id="joystick"></div>
-
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.0/nipplejs.min.js"></script>
   <script>
-    const socket = io();
+    // URL do backend remoto
+    const BACKEND_URL = 'https://levy-sbot-teste.onrender.com';
 
-    socket.on('connect', () => {
-      console.log('✅ Conectado ao servidor WebSocket');
-    });
+    const API_BASE = BACKEND_URL;
+    const WS_BASE = BACKEND_URL.replace(/^http/, 'ws');
 
-    const joystick = nipplejs.create({
-      zone: document.getElementById('joystick'),
-      mode: 'static',
-      position: { left: '50%', top: '50%' },
-      color: 'white'
-    });
+    const ws = new WebSocket(WS_BASE);
+    const joystick = document.getElementById('joystick');
+    const stick = document.getElementById('stick');
+    const botStatus = document.getElementById('botStatus');
+    let directions = { forward: false, back: false, left: false, right: false };
 
-    let currentDir = null;
-    let timeout = null;
-
-    joystick.on('dir', (evt, data) => {
-      const dir = data.direction?.angle;
-      if (!dir) return;
-
-      let moveDir = {
-        up: 'forward',
-        down: 'back',
-        left: 'left',
-        right: 'right'
-      }[dir];
-
-      if (moveDir && moveDir !== currentDir) {
-        socket.emit('move', moveDir);
-        currentDir = moveDir;
-
-        clearTimeout(timeout);
-        timeout = setTimeout(() => {
-          socket.emit('move', 'stop');
-          currentDir = null;
-        }, 400);
+    async function updateStatus() {
+      try {
+        const res = await fetch(`${API_BASE}/api/status`);
+        const data = await res.json();
+        if (data.online) {
+          botStatus.textContent = `Online como ${data.username} — Posição: (${data.position.x.toFixed(1)}, ${data.position.y.toFixed(1)}, ${data.position.z.toFixed(1)})`;
+        } else {
+          botStatus.textContent = 'Offline';
+        }
+      } catch (e) {
+        botStatus.textContent = 'Erro ao conectar';
       }
+    }
+    setInterval(updateStatus, 5000);
+    updateStatus();
+
+    function sendMove(dir, state) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'move', direction: dir, state }));
+      }
+    }
+
+    function stopAll() {
+      for (const dir in directions) {
+        if (directions[dir]) {
+          sendMove(dir, false);
+          directions[dir] = false;
+        }
+      }
+    }
+
+    joystick.addEventListener('touchend', () => {
+      stick.style.left = '45px';
+      stick.style.top = '45px';
+      stopAll();
     });
 
-    joystick.on('end', () => {
-      socket.emit('move', 'stop');
-      currentDir = null;
+    joystick.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = joystick.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const x = touch.clientX - centerX;
+      const y = touch.clientY - centerY;
+
+      stick.style.left = `${x + 75 - 30}px`;
+      stick.style.top = `${y + 75 - 30}px`;
+
+      const angle = Math.atan2(y, x);
+      const distance = Math.min(Math.hypot(x, y), 75);
+
+      stopAll();
+
+      if (distance > 20) {
+        if (angle > -Math.PI/4 && angle < Math.PI/4) {
+          sendMove('right', true); directions.right = true;
+        } else if (angle > Math.PI/4 && angle < 3*Math.PI/4) {
+          sendMove('forward', true); directions.forward = true;
+        } else if (angle > -3*Math.PI/4 && angle < -Math.PI/4) {
+          sendMove('back', true); directions.back = true;
+        } else {
+          sendMove('left', true); directions.left = true;
+        }
+      }
     });
   </script>
 </body>

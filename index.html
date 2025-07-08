@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ByteBot - Controle e Visão</title>
+  <title>ByteBot - Controle & Visão</title>
   <style>
     body {
       margin: 0;
@@ -50,7 +50,7 @@
   <div id="container">
     <iframe
       id="viewer"
-      src="https://levy-sbot-teste.onrender.com"
+      src="http://localhost:3000/viewer"
       allowfullscreen
     ></iframe>
 
@@ -60,7 +60,8 @@
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.0/nipplejs.min.js"></script>
   <script>
-    const socket = io("https://levy-sbot-teste.onrender.com");
+    const socket = io("http://localhost:3000"); // GARANTA que é o mesmo host da sua API!
+
     const joystick = nipplejs.create({
       zone: document.getElementById('joystick'),
       mode: 'static',

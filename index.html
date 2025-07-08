@@ -50,7 +50,7 @@
   <div id="container">
     <iframe
       id="viewer"
-      src="http://localhost:3000/viewer"
+      src="https://levy-sbot-teste.onrender.com"
       allowfullscreen
     ></iframe>
 
@@ -60,7 +60,7 @@
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.0/nipplejs.min.js"></script>
   <script>
-    const socket = io("http://localhost:3000"); // GARANTA que é o mesmo host da sua API!
+    const socket = io("https://levy-sbot-teste.onrender.com"); // GARANTA que é o mesmo host da sua API!
 
     const joystick = nipplejs.create({
       zone: document.getElementById('joystick'),
